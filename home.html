@@ -1,0 +1,178 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Exchange</title>
+  <meta name="description" content="Sanity project">
+
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+
+    table, th, td {
+      border: 1px solid black;
+      padding-left: 5px;
+      padding-right: 5px;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+
+    #container {
+      padding-left: 250px;
+      padding-right: 250px;
+      padding-top: 30px;
+    }
+    #bookFrame{
+      width: 20%;
+      float: left;
+    }
+    #chartFrame{
+      margin-left: 20%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <h1>Trades</h1>
+    <div id="bookFrame">
+      <p>Asks:</p>
+      <div id="asks">
+      </div>
+      <p>Bids:</p>
+      <div id="bids">
+      </div>
+    </div>
+    <div id="chartFrame">
+      <div>
+        <canvas id="myChart"></canvas>
+      </div>
+      <div>
+        Price:
+        <input type="number" name="price" id="price" value="100">
+        <br>
+        Amount:
+        <input type="number" name="amount" id="amount" value="5">
+        <br>
+        <button type="button" name="button" id="buyBtn">buy</button>
+        <button type="button" name="button" id="sellBtn">sell</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+  <script>
+
+  $(document).ready(function() {
+      $("#buyBtn").click(function(){
+
+        $.ajax({
+          type: "POST",
+          url: "/buy",
+          data: {"price": $( "#price" ).val(), "amount": $( "#amount" ).val()},
+          success: function () {
+            update()
+          }
+        });
+
+      });
+
+      $("#sellBtn").click(function(){
+
+        $.ajax({
+          type: "POST",
+          url: "/sell",
+          data: {"price": $( "#price" ).val(), "amount": $( "#amount" ).val()},
+          success: function () {
+            update()
+          }
+        });
+
+      });
+
+      function update() {
+
+        $.getJSON( "/history", function( data ) {
+            var timestamp = [];
+            var price = []
+
+            $.each( data, function( key, val ) {
+              timestamp.push(parseInt(key));
+              price.push(val);
+            })
+
+            for (var i = 0; i < timestamp.length - 1; i++) {
+              if (timestamp[i + 1] > timestamp[i] + 1) {
+                timestamp.splice(i + 1, 0, timestamp[i] + 1);
+                price.splice(i + 1, 0, price[i]);
+              }
+            }
+
+            timestamp = timestamp.map(function( val ) {
+              t = new Date(parseInt(val) * 1000);
+              t = t.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true })
+              return t
+            })
+
+
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var chart = new Chart(ctx, {
+                // The type of chart we want to create
+                type: 'line',
+
+                // The data for our dataset
+                data: {
+                    labels: timestamp,
+                    datasets: [{
+                        label: 'stock',
+                        backgroundColor: 'rgba(256, 256, 256, 0)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        data: price
+                    }]
+                },
+
+                // Configuration options go here
+                options: {}
+            });
+        });
+
+        $.getJSON( "/display", function( data ) {
+            var items = [];
+
+            items.push("<tr><th>price</th><th>amount</th></tr>")
+            $.each( data.asks, function( key, val ) {
+              items.push("<tr><td>"+ val[0] +"</td><td>"+ val[1] +"</td></tr>");
+            });
+
+            $("#asks").empty()
+
+            $( "<table/>", {
+              "class": "my-new-list",
+              html: items.join( "" )
+            }).appendTo( "#asks" );
+
+            var items = [];
+
+            items.push("<tr><th>price</th><th>amount</th></tr>")
+            $.each( data.bids, function( key, val ) {
+              items.push("<tr><td>"+ val[0] +"</td><td>"+ val[1] +"</td></tr>");
+            });
+
+            $("#bids").empty()
+
+            $( "<table/>", {
+              "class": "my-new-list",
+              html: items.join( "" )
+            }).appendTo( "#bids" );
+        });
+      }
+
+      update()
+  });
+  </script>
+</body>
+</html>
