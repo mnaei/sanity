@@ -3,8 +3,21 @@ from utils import Bid, Ask, Match, populateData, PriorityQueue
 from collections import defaultdict
 from threading import Timer
 from time import time
-import json
+import sys, json
 import numpy as np
+
+
+if "--dev" in sys.argv:
+
+    # overide the original match class so that orders from the populateData
+    # function are spread out over a random 20 second timeline
+    class Match(Match):
+        def __init__(self, time, price, amount):
+            super().__init__(time, price, amount)
+            self.time = int(time + np.random.rand() * 20)
+
+    t = Timer(1, populateData)
+    t.start()
 
 app = Bottle()
 
@@ -94,8 +107,5 @@ def history():
 
     return json.dumps(chart)
 
-
-t = Timer(1, populateData)
-t.start()
 
 run(app, host='localhost', port=8080, debug=True, reloader=True, quiet=False)

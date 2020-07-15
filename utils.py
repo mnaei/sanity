@@ -32,7 +32,7 @@ class Bid(Order):
 
 class Match():
     def __init__(self, time, price, amount):
-        self.time = int(time + np.random.rand() * 20) ## edit
+        self.time = int(time)
         self.price = price
         self.amount = amount
 
