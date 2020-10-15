@@ -1,22 +1,23 @@
 from bottle import Bottle, run, request, static_file, HTTPResponse
-from utils import Bid, Ask, Match, populateData, PriorityQueue
+from utils import Bid, Ask, Match, populateData
+from heapq import heappush, heappop
 from collections import defaultdict
-from threading import Timer
+from threading import Timer, Lock
 from time import time
-import sys, json
 import numpy as np
+import sys
+import json
 
 
 if "--dev" in sys.argv:
-
     # overide the original match class so that orders from the populateData
     # function are spread out over a random 20 second timeline
-    class Match(Match):
+    class Match(Match):  # pylint: disable=E0102
         def __init__(self, time, price, amount):
             super().__init__(time, price, amount)
             self.time = int(time + np.random.rand() * 20)
 
-    t = Timer(1, populateData)
+    t = Timer(5, populateData)
     t.start()
 
 app = Bottle()
@@ -25,87 +26,107 @@ global ASKID, BIDID
 ASKID = 0
 BIDID = 0
 
-global ASKBOOK, BIDBOOK
-ASKBOOK = PriorityQueue()
-BIDBOOK = PriorityQueue()
-
-global MATCHES
+global ASKBOOK, BIDBOOK, MATCHES
+ASKBOOK = []
+BIDBOOK = []
 MATCHES = []
+
+global bidLock, askLock, matchingLock
+bidLock = Lock()
+askLock = Lock()
+matchingLock = Lock()
+
 
 @app.get('/')
 def home():
-    return static_file("home.html", root = "")
+    return static_file("home.html", root="")
+
 
 @app.post('/buy')
 def buy():
-    global BIDID, BIDBOOK, ASKBOOK
-    BIDID += 1
-    gt = lambda lhs, rhs: lhs >= rhs
-    return trade(BIDID, "buy", BIDBOOK, ASKBOOK, gt)
+    global BIDID, BIDBOOK, ASKBOOK, bidLock
+    with bidLock:
+        BIDID += 1
+        id = BIDID
+
+    def gt(lhs, rhs): return lhs >= rhs
+    return trade(id, "buy", BIDBOOK, ASKBOOK, gt)
+
 
 @app.post('/sell')
 def sell():
-    global ASKID, ASKBOOK, BIDBOOK
-    ASKID += 1
-    lt = lambda lhs, rhs: lhs <= rhs
-    return trade(ASKID, "sell", ASKBOOK, BIDBOOK, lt)
+    global ASKID, ASKBOOK, BIDBOOK, askLock
+    with askLock:
+        ASKID += 1
+        id = ASKID
+
+    def lt(lhs, rhs): return lhs <= rhs
+    return trade(id, "sell", ASKBOOK, BIDBOOK, lt)
+
 
 def trade(id, side, book, crossedBook, cmp):
-    global MATCHES
-    price = request.POST.get("price")
-    amount = request.POST.get("amount")
+    global MATCHES, matchingLock
+    price = request.POST.get("price")  # pylint: disable=E1101
+    amount = request.POST.get("amount")  # pylint: disable=E1101
     price, amount = int(price), int(amount)
 
-    while amount != 0 and not crossedBook.empty() and cmp(price, crossedBook.top().price):
-        crossedOrder = crossedBook.top()
-        if amount >= crossedOrder.amount:
-            recordAmount = crossedOrder.amount
-            amount -= crossedOrder.amount
-            crossedBook.get()
-        else:
-            recordAmount = amount
-            crossedOrder.amount -= amount
-            amount = 0
-        MATCHES.append(Match(time(), crossedOrder.price, recordAmount))
+    with matchingLock:
+        while amount and crossedBook and cmp(price, crossedBook[0].price):
+            crossedOrder = crossedBook[0]
+            if amount >= crossedOrder.amount:
+                recordAmount = crossedOrder.amount
+                amount -= crossedOrder.amount
+                heappop(crossedBook)
+            else:
+                recordAmount = amount
+                crossedOrder.amount -= amount
+                amount = 0
+            MATCHES.append(Match(time(), crossedOrder.price, recordAmount))
 
-    if amount != 0:
-        if side == "buy":
-            book.put(Bid(id, price, amount))
-        else:
-            book.put(Ask(id, price, amount))
+        if amount:
+            if side == "buy":
+                heappush(book, Bid(id, price, amount))
+            else:
+                heappush(book, Ask(id, price, amount))
 
     return HTTPResponse(status=200)
 
+
 @app.get('/display')
 def display():
-    global ASKBOOK, BIDBOOK
+    global ASKBOOK, BIDBOOK, matchingLock
     askDisplay = defaultdict(int)
     bidDisplay = defaultdict(int)
 
-    for order in ASKBOOK.queue:
-        askDisplay[order.price] += order.amount
+    with matchingLock:
+        for order in ASKBOOK:
+            askDisplay[order.price] += order.amount
 
-    for order in BIDBOOK.queue:
-        bidDisplay[order.price] += order.amount
+        for order in BIDBOOK:
+            bidDisplay[order.price] += order.amount
 
     askDisplay = sorted(askDisplay.items(), reverse=True)
     bidDisplay = sorted(bidDisplay.items(), reverse=True)
 
     return json.dumps({"asks": askDisplay, "bids": bidDisplay})
 
+
 @app.get('/history')
 def history():
-    global MATCHES
+    global MATCHES, matchingLock
     temp = defaultdict(list)
     chart = {}
 
-    for m in MATCHES:
-        temp[m.time].append(m)
+    with matchingLock:
+        for m in MATCHES:
+            temp[m.time].append(m)
 
     for k, v in temp.items():
-        chart[k] = np.average([m.price for m in v], weights = [m.amount for m in v])
+        chart[k] = np.average([m.price for m in v],
+                              weights=[m.amount for m in v])
 
     return json.dumps(chart)
 
 
-run(app, host='localhost', port=8080, debug=True, reloader=True, quiet=False)
+run(app, host='localhost', port=8080, debug=False,
+    quiet=True, reloader=True, server="paste")

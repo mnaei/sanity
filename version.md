@@ -11,3 +11,15 @@ Testing:
 
 Scalability:
 - Utilize a multi threaded web server to increase requests per second
+
+# Spring #2
+1. Utilized a multi threaded web server 
+2. Thread safe orderbook implementation.
+3. Implemented some code styling according to pep8
+
+#### Performance
+Web server requests per second: ~300
+Latency: ~500 ms
+
+Web server requests per second: ~150
+Latency: ~150 ms
