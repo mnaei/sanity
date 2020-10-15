@@ -3,8 +3,8 @@ import numpy as np
 
 
 class Order():
-    def __init__(self, id, price, amount):
-        self.id = id
+    def __init__(self, id_, price, amount):
+        self.id = id_
         self.price = price
         self.amount = amount
 
@@ -15,14 +15,14 @@ class Order():
         return f'({self.price}, {self.amount})'
 
 
-class Ask(Order):
+class Ask(Order):  # pylint: disable=R0903
     def __lt__(self, rhs):
         if self.price == rhs.price:
             return self.id < rhs.id
         return self.price < rhs.price
 
 
-class Bid(Order):
+class Bid(Order):  # pylint: disable=R0903
     def __lt__(self, rhs):
         if self.price == rhs.price:
             return self.id < rhs.id

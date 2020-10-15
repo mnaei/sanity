@@ -12,26 +12,26 @@ import json
 if "--dev" in sys.argv:
     # overide the original match class so that orders from the populateData
     # function are spread out over a random 20 second timeline
-    class Match(Match):  # pylint: disable=E0102
-        def __init__(self, time, price, amount):
-            super().__init__(time, price, amount)
-            self.time = int(time + np.random.rand() * 20)
+    class Match(Match):  # pylint: disable=E0102,R0903
+        def __init__(self, time_, price, amount):
+            super().__init__(time_, price, amount)
+            self.time = int(time_ + np.random.rand() * 20)
 
     t = Timer(5, populateData)
     t.start()
 
 app = Bottle()
 
-global ASKID, BIDID
+global ASKID, BIDID  # pylint: disable=W0604
 ASKID = 0
 BIDID = 0
 
-global ASKBOOK, BIDBOOK, MATCHES
+global ASKBOOK, BIDBOOK, MATCHES  # pylint: disable=W0604
 ASKBOOK = []
 BIDBOOK = []
 MATCHES = []
 
-global bidLock, askLock, matchingLock
+global bidLock, askLock, matchingLock  # pylint: disable=W0604
 bidLock = Lock()
 askLock = Lock()
 matchingLock = Lock()
@@ -44,28 +44,28 @@ def home():
 
 @app.post('/buy')
 def buy():
-    global BIDID, BIDBOOK, ASKBOOK, bidLock
+    global BIDID, BIDBOOK, ASKBOOK, bidLock  # pylint: disable=W0603
     with bidLock:
         BIDID += 1
-        id = BIDID
+        id_ = BIDID
 
     def gt(lhs, rhs): return lhs >= rhs
-    return trade(id, "buy", BIDBOOK, ASKBOOK, gt)
+    return trade(id_, "buy", BIDBOOK, ASKBOOK, gt)
 
 
 @app.post('/sell')
 def sell():
-    global ASKID, ASKBOOK, BIDBOOK, askLock
+    global ASKID, ASKBOOK, BIDBOOK, askLock  # pylint: disable=W0603
     with askLock:
         ASKID += 1
-        id = ASKID
+        id_ = ASKID
 
     def lt(lhs, rhs): return lhs <= rhs
-    return trade(id, "sell", ASKBOOK, BIDBOOK, lt)
+    return trade(id_, "sell", ASKBOOK, BIDBOOK, lt)
 
 
-def trade(id, side, book, crossedBook, cmp):
-    global MATCHES, matchingLock
+def trade(id_, side, book, crossedBook, cmp):
+    global MATCHES, matchingLock  # pylint: disable=W0603
     price = request.POST.get("price")  # pylint: disable=E1101
     amount = request.POST.get("amount")  # pylint: disable=E1101
     price, amount = int(price), int(amount)
@@ -85,16 +85,16 @@ def trade(id, side, book, crossedBook, cmp):
 
         if amount:
             if side == "buy":
-                heappush(book, Bid(id, price, amount))
+                heappush(book, Bid(id_, price, amount))
             else:
-                heappush(book, Ask(id, price, amount))
+                heappush(book, Ask(id_, price, amount))
 
     return HTTPResponse(status=200)
 
 
 @app.get('/display')
 def display():
-    global ASKBOOK, BIDBOOK, matchingLock
+    global ASKBOOK, BIDBOOK, matchingLock  # pylint: disable=W0603
     askDisplay = defaultdict(int)
     bidDisplay = defaultdict(int)
 
@@ -113,7 +113,7 @@ def display():
 
 @app.get('/history')
 def history():
-    global MATCHES, matchingLock
+    global MATCHES, matchingLock  # pylint: disable=W0603
     temp = defaultdict(list)
     chart = {}
 

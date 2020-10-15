@@ -1,6 +1,7 @@
 from locust import HttpUser, task, between
 import numpy as np
 
+
 class QuickstartUser(HttpUser):
     wait_time = between(1, 1)
 
@@ -10,4 +11,4 @@ class QuickstartUser(HttpUser):
         price = int(np.random.randn() * 5 + 100)
         amount = int(np.random.rand() * 32)
         self.client.post("http://localhost:8080/" + side,
-            {"price": price, "amount": amount})
+                         {"price": price, "amount": amount})
