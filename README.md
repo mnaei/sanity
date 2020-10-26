@@ -7,3 +7,7 @@ The goal of Sanity is to educate the creator of the project and other developers
 
 #### Performance test
 `$ locust` to start the locust web portal
+
+#### Ensure code and style compliance
+`$ pylint <file> --disable=C` to check for potential programming errors
+`$ pycodestyle <file>` to check for styling compliance
