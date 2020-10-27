@@ -20,6 +20,9 @@ Latency: ~150 ms
 # Sprint #3
 1. Packaged the project to allow the separation of source code and test code
 
+# Sprint #4
+1. Seprated the matching engine from the http server to enable more modular development and testing
+
 # Next steps
 Testing:
 - Create unit tests to ensure the correct implementation of the matching engine
