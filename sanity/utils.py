@@ -8,6 +8,9 @@ class Order():
         self.price = price
         self.amount = amount
 
+    def __eq__(self, other):
+        return self.id == other.id and self.price == other.price and self.amount == other.amount
+
     def __str__(self):
         return f'({self.price}, {self.amount})'
 
@@ -43,15 +46,3 @@ class Match():
 
     def __lt__(self, rhs):  # edit
         return self.time < rhs.time
-
-
-def populateData():
-    size = 20
-
-    side = np.random.choice(["sell", "buy"], size)
-    price = (np.random.randn(size) * 5 + 100).astype(int)
-    amount = (np.random.rand(size) * 32).astype(int)
-
-    for i in range(size):
-        requests.post("http://localhost:8080/" + side[i],
-                      {"price": price[i], "amount": amount[i]})

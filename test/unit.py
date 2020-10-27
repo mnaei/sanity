@@ -1,15 +1,16 @@
 import unittest
-from boddle import boddle
-from sanity import main
+from sanity.main import MatchingEngine
+from sanity.utils import Bid, Ask, Match
 
 
 class TestStringMethods(unittest.TestCase):
 
     def test_upper(self):
-        with boddle(params={"price": 100, "amount": 20}, path="/buy"):
-            main.buy()
-        with boddle(path="/display"):
-            d = main.display()
+        engine = MatchingEngine()
+        engine.buy(100, 20)
+        bid = Bid(1, 100, 20)
+        breakpoint()
+        self.assertIn(bid, engine.BIDBOOK)
 
 
 if __name__ == '__main__':
