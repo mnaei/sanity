@@ -1,5 +1,5 @@
 from bottle import Bottle, run, request, static_file, HTTPResponse
-from utils import Bid, Ask, Match, populateData
+from sanity.utils import Bid, Ask, Match, populateData
 from heapq import heappush, heappop
 from collections import defaultdict
 from threading import Timer, Lock
@@ -128,5 +128,6 @@ def history():
     return json.dumps(chart)
 
 
-run(app, host='localhost', port=8080, debug=False,
-    quiet=True, reloader=True, server="paste")
+if __name__ == "__main__":
+    run(app, host='localhost', port=8080, debug=False,
+        quiet=True, reloader=True, server="paste")

@@ -4,3 +4,4 @@ bottle==0.12.18
 locustio==0.999
 pylint==2.6.0
 pycodestyle==2.6.0
+boddle==0.2.9
